@@ -1,0 +1,71 @@
+service: shui-backend
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: eu-west-1   # ändra vid behov
+  environment:
+    TABLE_NAME: ${self:service}-messages
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:GetItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:Scan
+            - dynamodb:Query
+          Resource: arn:aws:dynamodb:*:*:table/${self:service}-messages
+
+functions:
+  messages:
+    handler: handler.router
+    events:
+      - http:
+          path: messages
+          method: get
+          cors: true
+      - http:
+          path: messages
+          method: post
+          cors: true
+      - http:
+          path: messages/{id}
+          method: put
+          cors: true
+      - http:
+          path: messages/{id}
+          method: delete
+          cors: true
+      - http:
+          path: messages/user/{username}
+          method: get
+          cors: true
+
+resources:
+  Resources:
+    MessagesDynamoDBTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-messages
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: username
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: username-index
+            KeySchema:
+              - AttributeName: username
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+        BillingMode: PAY_PER_REQUEST
